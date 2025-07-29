@@ -114,7 +114,7 @@
   const manholeMarkerMap = {};
   let directionsService;
 
-  const API_BASE = process.env.API_BASE_URL || "http://localhost:3000";
+  const API_BASE = "https://gmap-csbe.onrender.com/user";
     
   async function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
