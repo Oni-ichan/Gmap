@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sewer Report Portal (New Delhi)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+    }
+
+    #complaint-container {
+      width: 32%;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.95);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map-container {
+      width: 68%;
+      height: 100vh;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    form {
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+
+    h3 {
+      margin-bottom: 15px;
+      color: #34495e;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      color: #2c3e50;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    select, textarea, input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e6ed;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.9);
+      transition: all 0.3s ease;
+    }
+
+    select:focus, textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      background: rgba(255, 255, 255, 1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 25px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #2980b9, #1f5f8b);
+    }
+
+    #complaintLog {
+      flex-grow: 1;
+      margin-top: 15px;
+      overflow-y: auto;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      border: 1px solid #e0e6ed;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    #complaintLog div {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+
+    #complaintLog div:last-child {
+      border-bottom: none;
+    }
+
+    .severity-high { color: #e74c3c; font-weight: bold; }
+    .severity-medium { color: #f39c12; font-weight: bold; }
+    .severity-low { color: #27ae60; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="complaint-container">
+    <h2>Report Sewer Issue - New Delhi</h2>
+    <form id="complaintForm">
+      <label for="manholeSelect">Select Manhole</label>
+      <select id="manholeSelect" required>
+        <option value="" disabled selected>Select a manhole</option>
+      </select>
+
+      <label for="title">Issue Title</label>
+      <input type="text" id="title" placeholder="E.g., Overflow or blockage" required />
+
+      <label for="description">Description</label>
+      <textarea id="description" rows="4" placeholder="Describe the issue" required></textarea>
+
+      <label for="severity">Severity</label>
+      <select id="severity" required>
+        <option value="" disabled selected>Select severity</option>
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+
+      <button type="submit">Submit Complaint</button>
+    </form>
+
+    <h3>Registered Complaints</h3>
+    <div id="complaintLog">
+      <em>No complaints registered yet.</em>
+    </div>
+  </div>
+
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+<script src="data.js"></script>
+
+<script>
+  const manholeSelect = document.getElementById('manholeSelect');
+  const complaintLog = document.getElementById('complaintLog');
+  const form = document.getElementById('complaintForm');
+
+  // Populate manhole dropdown from data.js
+  manholes.forEach(mh => {
+    const option = document.createElement('option');
+    option.value = mh.id;
+    option.textContent = `${mh.id} (Lat: ${mh.lat.toFixed(4)}, Lng: ${mh.lng.toFixed(4)})`;
+    manholeSelect.appendChild(option);
+  });
+
+  // Fetch complaints from server and render them
+  async function renderComplaintLog() {
+    try {
+      const res = await fetch('http://localhost:3000/complaints'); // Full URL for clarity
+      if (!res.ok) throw new Error('Failed to fetch complaints');
+      const complaints = await res.json();
+
+      if (complaints.length === 0) {
+        complaintLog.innerHTML = '<em>No complaints registered yet.</em>';
+        return;
+      }
+
+      complaintLog.innerHTML = complaints.map(c => `
+        <div>
+          <strong>${c.title}</strong>
+          <span class="severity-${c.severity.toLowerCase()}"> (${c.severity})</span><br>
+          <small>${c.date} - <em>Status: ${c.status}</em></small>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error('Failed to load complaints:', err);
+      complaintLog.innerHTML = '<em>Failed to load complaints from server.</em>';
+    }
+  }
+
+  // Initial load
+  renderComplaintLog();
+
+  // Handle form submission
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const selectedManhole = manholes.find(mh => mh.id === manholeSelect.value);
+    if (!selectedManhole) {
+      alert('Please select a valid manhole.');
+      return;
+    }
+
+    const complaint = {
+      id: selectedManhole.id,
+      lat: selectedManhole.lat,
+      lng: selectedManhole.lng,
+      title: document.getElementById('title').value.trim(),
+      description: document.getElementById('description').value.trim(),
+      severity: document.getElementById('severity').value,
+      date: new Date().toLocaleString(),
+      status: "Pending"
+    };
+
+    try {
+      const res = await fetch('http://localhost:3000/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(complaint)
+      });
+
+      if (!res.ok) throw new Error('Failed to submit complaint');
+
+      alert('Thank you! Your complaint has been submitted successfully.');
+      form.reset();
+      renderComplaintLog(); // Refresh log after submission
+    } catch (err) {
+      console.error('Complaint submission error:', err);
+      alert('Failed to submit complaint. Please try again later.');
+    }
+  });
+
+  // Google Map initialization - unchanged
+  function initMap() {
+    const center = manholes[0];
+    const map = new google.maps.Map(document.getElementById('map'), {
+      zoom: 14,
+      center: { lat: center.lat, lng: center.lng }
+    });
+
+    manholes.forEach(mh => {
+      const marker = new google.maps.Marker({
+        position: { lat: mh.lat, lng: mh.lng },
+        map,
+        title: mh.id,
+        icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+      });
+
+      marker.addListener('click', () => {
+        manholeSelect.value = mh.id;
+        manholeSelect.focus();
+        form.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  }
+
+  window.initMap = initMap;
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBV-BwzjUh-yggOoj1pk7VRiefVllzzqWw&callback=initMap">
+</script>

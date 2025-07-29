@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sewer Admin Dashboard (New Delhi)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 320px;
+      background: #f4f4f4;
+      padding: 15px;
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #map {
+      flex: 1;
+      height: 100vh;
+    }
+    .complaint {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 12px;
+      border-left: 5px solid #2196F3;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .complaint.red { border-color: #e53935; }
+    .complaint.orange { border-color: #fb8c00; }
+    .complaint.resolved {
+      opacity: 0.6;
+      background-color: #e0e0e0;
+      cursor: default;
+    }
+    .complaint:hover:not(.resolved) {
+      background-color: #e3f2fd;
+    }
+    button {
+      cursor: pointer;
+      margin-top: 8px;
+      padding: 6px 12px;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    button:disabled {
+      background-color: #90caf9;
+      cursor: not-allowed;
+    }
+
+    /* Floating Chat Agent Styles */
+ #agent-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 550px;
+  height: 700px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 1000;
+  display: block;  /* Changed from 'none' for debug */
+
+}
+
+    #chat-toggle-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: #007bff;
+      color: white;
+      font-size: 22px;
+      border: none;
+      cursor: pointer;
+      z-index: 1100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    langflow-chat {
+      width: 50%;
+      height: 50%;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="sidebar">
+    <h2>Complaints</h2>
+    <button id="clearComplaintsBtn">🗑️ Clear All Complaints</button>
+    <div id="complaints-list">Loading complaints...</div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Admin Logic -->
+  <script src="data.js"></script>
+  <script>
+
+  let map;
+  let manholeMarkers = [];
+  const vehicleStates = {};
+  const manholeMarkerMap = {};
+  let directionsService;
+
+  const API_BASE = "http://localhost:3000";
+
+  async function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 15,
+      center: cleaningHub
+    });
+
+    directionsService = new google.maps.DirectionsService();
+
+    // Initialize vehicles
+    cleaningVehicles.forEach(v => {
+      const marker = new google.maps.Marker({
+        position: { lat: v.lat, lng: v.lng },
+        map,
+        icon: "https://maps.google.com/mapfiles/kml/shapes/truck.png",
+        title: `Vehicle ${v.id} - Idle`
+      });
+      vehicleStates[v.id] = {
+        marker,
+        currentPosition: { lat: v.lat, lng: v.lng },
+        busy: false
+      };
+    });
+
+    updateAndRedraw();
+    setInterval(updateAndRedraw, 15000);
+
+    document.getElementById("clearComplaintsBtn").addEventListener("click", clearAllComplaints);
+  }
+
+  async function updateAndRedraw() {
+    clearManholeMarkers();
+    updateManholeLevels();
+    drawManholes();
+    drawPipes();
+    drawCleaningHub();
+    await loadComplaints();
+  }
+
+  function clearManholeMarkers() {
+    manholeMarkers.forEach(marker => marker.setMap(null));
+    manholeMarkers = [];
+    Object.keys(manholeMarkerMap).forEach(key => delete manholeMarkerMap[key]);
+  }
+
+  function updateManholeLevels() {
+    manholes.forEach(mh => {
+      mh.level = Math.floor(Math.random() * 100);
+    });
+  }
+
+  function drawManholes() {
+    manholes.forEach(mh => {
+      const iconColor = mh.level > 70 ? "red" : mh.level > 50 ? "orange" : "green";
+
+      const marker = new google.maps.Marker({
+        position: { lat: mh.lat, lng: mh.lng },
+        map,
+        title: `${mh.id} - Fill Level: ${mh.level}%`,
+        icon: `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<strong>${mh.id}</strong><br>Fill Level: ${mh.level}%<br>Lat: ${mh.lat.toFixed(5)}, Lng: ${mh.lng.toFixed(5)}`
+      });
+
+      marker.addListener("click", () => infoWindow.open(map, marker));
+
+      manholeMarkers.push(marker);
+      manholeMarkerMap[mh.id] = marker;
+    });
+  }
+
+  function drawPipes() {
+    pipeSegments.forEach(seg => {
+      const from = manholes.find(m => m.id === seg.from);
+      const to = manholes.find(m => m.id === seg.to);
+
+      if (from && to) {
+        const line = new google.maps.Polyline({
+          path: [{ lat: from.lat, lng: from.lng }, { lat: to.lat, lng: to.lng }],
+          geodesic: true,
+          strokeColor: seg.status === "Blocked" ? "#FF0000" : "#00BFFF",
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          map
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<strong>Pipe Segment</strong><br>From: ${seg.from}<br>To: ${seg.to}<br>Flow: ${seg.flow}<br>Status: ${seg.status}`
+        });
+
+        line.addListener("click", e => {
+          infoWindow.setPosition(e.latLng);
+          infoWindow.open(map);
+        });
+      }
+    });
+  }
+
+  let hubMarker, hubInfoWindow;
+
+  function drawCleaningHub() {
+    const idleCount = cleaningVehicles.filter(v => !vehicleStates[v.id]?.busy).length;
+
+    if (hubMarker) hubMarker.setMap(null);
+    if (hubInfoWindow) hubInfoWindow.close();
+
+    hubMarker = new google.maps.Marker({
+      position: cleaningHub,
+      map,
+      title: "Cleaning Hub",
+      icon: "https://maps.google.com/mapfiles/kml/shapes/homegardenbusiness.png"
+    });
+
+    hubInfoWindow = new google.maps.InfoWindow({
+      content: `<strong>Cleaning Hub</strong><br>Idle Vehicles: ${idleCount}`
+    });
+
+    hubMarker.addListener("mouseover", () => hubInfoWindow.open(map, hubMarker));
+    hubMarker.addListener("mouseout", () => hubInfoWindow.close());
+  }
+
+  async function loadComplaints() {
+    const list = document.getElementById("complaints-list");
+    list.innerHTML = "Loading complaints...";
+    try {
+      const res = await fetch(`${API_BASE}/complaints`);
+      if (!res.ok) throw new Error("Failed to load complaints");
+      const complaints = await res.json();
+
+      if (complaints.length === 0) {
+        list.innerHTML = "<em>No complaints found.</em>";
+        return;
+      }
+
+      list.innerHTML = "";
+      complaints.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "complaint";
+        if (c.severity === "High") div.classList.add("red");
+        else if (c.severity === "Medium") div.classList.add("orange");
+        if (c.status === "Resolved") div.classList.add("resolved");
+
+        div.innerHTML = `
+          <strong>${c.title || "Complaint"}</strong><br>
+          ${c.description || ""}<br>
+          <small>${new Date(c.date).toLocaleString()}</small><br>
+          <small>Status: ${c.status || "Pending"}</small><br>
+          <button ${c.status === "Resolved" ? "disabled" : ""} data-id="${c.id}">🚚 Assign Vehicle</button>
+        `;
+
+        div.querySelector("button").addEventListener("click", () => assignVehicleTo(c));
+
+        div.addEventListener("click", (e) => {
+          if (e.target.tagName.toLowerCase() === 'button') return;
+          const marker = manholeMarkerMap[c.id];
+          if (marker) {
+            map.panTo(marker.getPosition());
+            map.setZoom(18);
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<strong>${c.title}</strong><br>${c.description}<br><small>${new Date(c.date).toLocaleString()}</small>`
+            });
+            infoWindow.open(map, marker);
+            marker.setAnimation(google.maps.Animation.BOUNCE);
+            setTimeout(() => marker.setAnimation(null), 1400);
+          }
+        });
+
+        list.appendChild(div);
+      });
+
+    } catch (error) {
+      list.innerHTML = `<em>Error loading complaints: ${error.message}</em>`;
+    }
+  }
+
+  async function assignVehicleTo(complaint) {
+    if (!complaint.lat || !complaint.lng) {
+      alert("Complaint location is invalid.");
+      return;
+    }
+
+    const availableVehicle = Object.values(vehicleStates).find(v => !v.busy);
+    if (!availableVehicle) {
+      alert("All vehicles are currently busy.");
+      return;
+    }
+
+    availableVehicle.busy = true;
+    const start = availableVehicle.currentPosition;
+    const end = { lat: complaint.lat, lng: complaint.lng };
+
+    console.log(`Assigning vehicle at (${start.lat}, ${start.lng}) to complaint at (${end.lat}, ${end.lng})`);
+
+    moveVehicleAlongRoad(availableVehicle, start, end, async () => {
+      alert(`✅ Vehicle reached complaint ${complaint.id}`);
+      availableVehicle.busy = false;
+      availableVehicle.currentPosition = end;
+
+      try {
+        const res = await fetch(`${API_BASE}/complaints/${complaint.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "Resolved" })
+        });
+        if (!res.ok) throw new Error("Failed to update complaint status");
+        const result = await res.json();
+        console.log("Updated complaint returned:", result);
+        await loadComplaints();
+      } catch (e) {
+        console.error("Error updating status", e);
+        alert("Error updating complaint status: " + e.message);
+      }
+    });
+  }
+
+  function moveVehicleAlongRoad(vehicle, start, end, callback) {
+    if (!directionsService) {
+      alert("Directions service not initialized.");
+      vehicle.busy = false;
+      return;
+    }
+    directionsService.route(
+      {
+        origin: start,
+        destination: end,
+        travelMode: google.maps.TravelMode.DRIVING
+      },
+      (result, status) => {
+        if (status === "OK") {
+          const route = result.routes[0].overview_path;
+          animateRoute(vehicle.marker, route, callback);
+        } else {
+          alert("Routing failed: " + status);
+          vehicle.busy = false;
+        }
+      }
+    );
+  }
+
+  function animateRoute(marker, path, callback) {
+    let step = 0;
+    function move() {
+      if (step < path.length) {
+        marker.setPosition(path[step]);
+        marker.setTitle("In route...");
+        step++;
+        setTimeout(move, 600);
+      } else {
+        marker.setTitle("Idle");
+        callback();
+      }
+    }
+    move();
+  }
+
+  async function clearAllComplaints() {
+    if (!confirm("Are you sure you want to delete all complaints?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/complaints`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to clear complaints");
+      alert("All complaints cleared.");
+      await loadComplaints();
+    } catch (err) {
+      alert("Error clearing complaints: " + err.message);
+    }
+  }
+    
+  window.initMap = initMap;
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBV-BwzjUh-yggOoj1pk7VRiefVllzzqWw&callback=initMap"></script>
+
+ <!-- Toggle Button for Chat Agent -->
+  <button id="chat-toggle-btn" title="Open Assistant">💬</button>
+
+  <!-- Chat Agent (UNCHANGED CODE INSIDE) -->
+  <div id="agent-container">
+    <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js"></script>
+    <langflow-chat
+      window_title="Sewer Agent"
+      flow_id="24f43bd2-a2ab-4f27-a96f-5d1b89bbc06c"
+      host_url="http://localhost:7860">
+    </langflow-chat>
+  </div>
+
+  <!-- Toggle Script -->
+  <script>
+    const toggleBtn = document.getElementById('chat-toggle-btn');
+    const agentContainer = document.getElementById('agent-container');
+
+    toggleBtn.addEventListener('click', () => {
+      const isVisible = agentContainer.style.display === 'block';
+      agentContainer.style.display = isVisible ? 'none' : 'block';
+      toggleBtn.textContent = isVisible ? '💬' : '❌';
+      toggleBtn.title = isVisible ? 'Open Assistant' : 'Close Assistant';
+    });
+  </script>
+</body>
+</html>
