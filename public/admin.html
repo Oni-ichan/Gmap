@@ -116,7 +116,31 @@
 
 const API_BASE = 'https://gmap-csbe.onrender.com';
 
-    
+  function sendLiveManholeData() {
+  const liveData = manholes.map(mh => ({
+    id: mh.id,
+    lat: mh.lat,
+    lng: mh.lng,
+    level: mh.level,
+    status: mh.level > 70 ? 'Urgent' : 'Normal',
+  }));
+
+  fetch(`${API_BASE}/manholes/live`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(liveData),
+  })
+    .then(res => res.json())
+    .then(data => console.log("Server response:", data))
+    .catch(err => console.error("Error sending manhole data:", err));
+}
+
+
+setInterval(sendLiveManholeData, 10000);
+
+  
   async function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
       zoom: 15,
