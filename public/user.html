@@ -203,7 +203,7 @@
   // Fetch complaints from server and render them
   async function renderComplaintLog() {
     try {
-      const res = await fetch('http://localhost:3000/complaints'); // Full URL for clarity
+      const res = await fetch('https://gmap-csbe.onrender.com/complaints'); // Full URL for clarity
       if (!res.ok) throw new Error('Failed to fetch complaints');
       const complaints = await res.json();
 
@@ -250,7 +250,7 @@
     };
 
     try {
-      const res = await fetch('http://localhost:3000/complaints', {
+      const res = await fetch('https://gmap-csbe.onrender.com/complaints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(complaint)
