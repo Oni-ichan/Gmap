@@ -24,7 +24,7 @@
     /* Sidebar */
     #sidebar {
       width: 360px;
-      background: linear-gradient(180deg, #4b79a1 0%, #283e51 100%);
+      background: linear-gradient(180deg, #85c4fb 0%, #0584f4 100);
       padding: 25px 20px 20px 25px;
       overflow-y: auto;
       border-right: none;
@@ -277,8 +277,12 @@
 
 <body>
   <div id="sidebar">
-    <h2>Complaints</h2>
-    <button id="clearComplaintsBtn">🗑️ Clear All Complaints</button>
+    <div class="sidebar-header">
+      <h1 class="sidebar-title">Sewer Management</h1>
+      <p class="sidebar-subtitle">New Delhi Municipal Corporation</p>
+      <p class="sidebar-subtitle">--------------------------------------------</p>
+      <button id="clearComplaintsBtn">🗑️ Clear All Complaints</button>
+    </div>
     <div id="complaints-list">Loading complaints...</div>
   </div>
 
