@@ -5,92 +5,272 @@
   <title>Sewer Admin Dashboard (New Delhi)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      height: 100vh;
-    }
-    #sidebar {
-      width: 320px;
-      background: #f4f4f4;
-      padding: 15px;
-      overflow-y: auto;
-      border-right: 1px solid #ccc;
+    /* Reset & Base */
+    * {
       box-sizing: border-box;
     }
-    #map {
-      flex: 1;
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
       height: 100vh;
+      background-color: #f9fafe;
+      color: #333;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    /* Sidebar */
+    #sidebar {
+      width: 360px;
+      background: linear-gradient(180deg, #4b79a1 0%, #283e51 100%);
+      padding: 25px 20px 20px 25px;
+      overflow-y: auto;
+      border-right: none;
+      box-shadow: 3px 0 8px rgba(0, 0, 0, 0.1);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #sidebar h2 {
+      font-weight: 700;
+      font-size: 1.8rem;
+      margin: 0 0 20px 0;
+      user-select: none;
+      letter-spacing: 0.03em;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    #clearComplaintsBtn {
+      align-self: flex-start;
+      cursor: pointer;
+      margin-bottom: 20px;
+      padding: 10px 18px;
+      border: none;
+      background-color: #e94e77;
+      color: white;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #clearComplaintsBtn:hover:not(:disabled) {
+      background-color: #d43f65;
+    }
+    #clearComplaintsBtn:disabled {
+      background-color: #bbcedd;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #complaints-list {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding-right: 4px; /* for scrollbar spacing */
+      font-size: 0.95rem;
+      user-select: none;
+    }
+
+    /* Scrollbar for complaints list */
+    #complaints-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    #complaints-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #complaints-list::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+    }
+
+    /* Complaint cards */
     .complaint {
       background: #fff;
-      padding: 10px;
-      margin-bottom: 12px;
-      border-left: 5px solid #2196F3;
+      color: #333;
+      padding: 17px 20px 20px 22px;
+      margin-bottom: 15px;
+      border-left: 6px solid #2196F3;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      transition: background-color 0.35s, transform 0.2s;
+      position: relative;
+      user-select: text;
     }
     .complaint.red { border-color: #e53935; }
     .complaint.orange { border-color: #fb8c00; }
     .complaint.resolved {
-      opacity: 0.6;
-      background-color: #e0e0e0;
+      opacity: 0.5;
+      background-color: #f0f0f0;
       cursor: default;
+      color: #777;
+      text-decoration: line-through;
+      box-shadow: none;
     }
-    .complaint:hover:not(.resolved) {
-      background-color: #e3f2fd;
+    .complaint:not(.resolved):hover {
+      background-color: #f0f7ff;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(33, 150, 243, 0.25);
+      z-index: 2;
     }
-    button {
+    .complaint strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      color: #222;
+      user-select: text;
+    }
+    .complaint small {
+      color: #555;
+      font-style: italic;
+      display: block;
+      margin-top: 7px;
+      font-size: 0.8rem;
+    }
+
+    /* Buttons inside complaint */
+    .complaint button {
       cursor: pointer;
-      margin-top: 8px;
-      padding: 6px 12px;
+      margin-top: 12px;
+      padding: 8px 18px;
       border: none;
       background-color: #2196F3;
       color: white;
-      border-radius: 4px;
+      border-radius: 30px;
       font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(33, 150, 243, 0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    button:disabled {
+    .complaint button:hover:not(:disabled) {
+      background-color: #1769aa;
+      box-shadow: 0 6px 14px rgba(23, 105, 170, 0.6);
+    }
+    .complaint button:disabled {
       background-color: #90caf9;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
+    /* Map container */
+    #map {
+      flex: 1;
+      height: 100vh;
+      /* subtle shadow to separate visually */
+      box-shadow: -3px 0 8px rgba(0,0,0,0.08);
+    }
+
+    /* Cleaning hub info styling (InfoWindow customized in JS) */
+    /* Popup styling is controlled inside Google Maps */
+
     /* Floating Chat Agent Styles */
- #agent-container {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 550px;
-  height: 700px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-  z-index: 1000;
-  display: block;  /* Changed from 'none' for debug */
+    #agent-container {
+      position: fixed;
+      bottom: 90px;
+      right: 30px;
+      width: 550px;
+      height: 700px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+      z-index: 1100;
+      display: block;  /* Keep visible for debug or toggle */
+      transition: box-shadow 0.3s ease;
+    }
+    #agent-container:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.40);
+    }
+    langflow-chat {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
-}
-
+    /* Toggle Button for Chat Agent */
     #chat-toggle-btn {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      width: 50px;
-      height: 50px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
       background-color: #007bff;
       color: white;
-      font-size: 22px;
+      font-size: 28px;
       border: none;
       cursor: pointer;
-      z-index: 1100;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 1200;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.38);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+      user-select: none;
+      outline-offset: 2px;
     }
-    langflow-chat {
-      width: 50%;
-      height: 50%;
-      display: block;
+    #chat-toggle-btn:hover {
+      background-color: #0056b3;
+      transform: scale(1.1);
+    }
+    #chat-toggle-btn:focus {
+      outline: 3px solid #80bdff;
+      outline-offset: 3px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      #sidebar {
+        width: 280px;
+        padding: 20px 18px 18px 20px;
+      }
+      .complaint {
+        padding: 15px 15px 18px 18px;
+        border-left-width: 4px;
+      }
+      #clearComplaintsBtn {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+      }
+      #agent-container {
+        width: 90vw;
+        height: 80vh;
+        right: 5vw;
+        bottom: 80px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #sidebar {
+        display: none;
+      }
+      #map {
+        width: 100vw;
+      }
+      #agent-container {
+        width: 100vw;
+        height: 100vh;
+        right: 0;
+        bottom: 0;
+        border-radius: 0;
+      }
+      #chat-toggle-btn {
+        right: 15px;
+        bottom: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+      }
     }
   </style>
 </head>
@@ -411,7 +591,7 @@ setInterval(sendLiveManholeData, 10000);
     
   window.initMap = initMap;
   </script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBV-BwzjUh-yggOoj1pk7VRiefVllzzqWw&callback=initMap"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDsqV_2YCvjELYM38WxjMwstd-vbB4w9ek&callback=initMap"></script>
 
  <!-- Toggle Button for Chat Agent -->
   <button id="chat-toggle-btn" title="Open Assistant">💬</button>
