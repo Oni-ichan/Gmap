@@ -5,97 +5,31 @@
   <title>Sewer Admin Dashboard (New Delhi)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-    
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, sans-serif;
       display: flex;
       height: 100vh;
-      background: #f8f9fc;
     }
-    
     #sidebar {
-      width: 380px;
-      background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
-      color: white;
+      width: 320px;
+      background: #f4f4f4;
+      padding: 15px;
       overflow-y: auto;
-      border-right: 1px solid #e5e7eb;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
     }
-    
-    .sidebar-header {
-      padding: 24px 20px;
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .sidebar-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-      color: #ffffff;
-    }
-    
-    .sidebar-subtitle {
-      font-size: 0.9rem;
-      opacity: 0.8;
-      margin: 0;
-    }
-    
-    .stats-container,
-    .filters-container,
-    .search-container,
-    .filter-section,
-    .filter-title,
-    .filter-buttons,
-    .filter-btn,
-    .search-input {
-      display: none;
-    }
-    
-    .complaints-container {
+    #map {
       flex: 1;
-      padding: 20px;
-      overflow-y: auto;
+      height: 100vh;
     }
-    
-    .complaints-header {
-      display: flex;
-      justify-content: between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    
-    .complaints-title {
-      font-size: 1rem;
-      font-weight: 600;
-      margin: 0;
-      opacity: 0.9;
-    }
-    
     .complaint {
-      background: rgba(255,255,255,0.95);
-      color: #374151;
-      padding: 16px;
+      background: #fff;
+      padding: 10px;
       margin-bottom: 12px;
-      border-radius: 12px;
+      border-left: 5px solid #2196F3;
       cursor: pointer;
-      transition: all 0.3s ease;
-      border-left: 4px solid #3b82f6;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      backdrop-filter: blur(10px);
-    }
-    
-    .complaint:hover:not(.resolved) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      background: #ffffff;
+      transition: background-color 0.3s;
     }
     .complaint.red { border-color: #e53935; }
     .complaint.orange { border-color: #fb8c00; }
@@ -104,7 +38,8 @@
       background-color: #e0e0e0;
       cursor: default;
     }
-
+    .complaint:hover:not(.resolved) {
+      background-color: #e3f2fd;
     }
     button {
       cursor: pointer;
@@ -161,14 +96,11 @@
 </head>
 
 <body>
-    <div id="sidebar">
-    <div class="sidebar-header">
-      <h1 class="sidebar-title">Sewer Management</h1>
-      <p class="sidebar-subtitle">New Delhi Municipal Corporation</p>
-      <p class="sidebar-subtitle">--------------------------------------------</p>
-      <button id="clearComplaintsBtn">🗑️ Clear All Complaints</button>
+  <div id="sidebar">
+    <h2>Complaints</h2>
+    <button id="clearComplaintsBtn">🗑️ Clear All Complaints</button>
     <div id="complaints-list">Loading complaints...</div>
-    </div>
+  </div>
 
   <div id="map"></div>
 
